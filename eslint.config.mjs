@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored Draco decoder, copied verbatim out of the three.js package so the
+    // 3D viewer works without a CDN. Not our code, not ours to lint.
+    "public/draco/**",
   ]),
 ]);
 

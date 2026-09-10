@@ -1,69 +1,84 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { currentAccount, currentLang } from "@/lib/session";
+import { dict } from "@/lib/i18n";
+import { feedModels, type FeedSort } from "@/lib/queries";
+import { getSettings, uploadGate } from "@/lib/settings";
+import { ModelCard } from "@/components/ModelCard";
+import { absoluteDateTime } from "@/lib/format";
 
-export default function Home() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; sort?: string }>;
+}) {
+  const account = await currentAccount();
+  if (!account) redirect("/login");
+
+  const [lang, params, settings] = await Promise.all([currentLang(), searchParams, getSettings()]);
+  const d = dict(lang);
+
+  const sort: FeedSort = params.sort === "liked" || params.sort === "discussed" ? params.sort : "newest";
+  const search = params.q ?? "";
+  const models = await feedModels({ search, sort, includeHidden: account.role === "admin" });
+  const gate = uploadGate(settings);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{d.feed.title}</h1>
+          <p className="muted small" style={{ margin: 0 }}>
+            {settings.deadline_at && gate.ok
+              ? `${d.admin.settings.deadline}: ${absoluteDateTime(settings.deadline_at, lang)}`
+              : null}
           </p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <form className="row row-tight" action="/">
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder={d.feed.search}
+            style={{ width: 210 }}
+          />
+          <select name="sort" defaultValue={sort} style={{ width: "auto" }}>
+            <option value="newest">{d.feed.sortNewest}</option>
+            <option value="liked">{d.feed.sortLiked}</option>
+            <option value="discussed">{d.feed.sortDiscussed}</option>
+          </select>
+          <button className="btn btn-sm" type="submit">
+            {d.feed.sort}
+          </button>
+        </form>
+      </div>
+
+      {!gate.ok && (
+        <div className="alert alert-warn">
+          {gate.reason === "frozen" ? d.upload.frozen : d.upload.pastDeadline}
         </div>
-      </main>
-    </div>
+      )}
+
+      {models.length === 0 ? (
+        <div className="empty">
+          <p className="strong">{search ? d.feed.noResults : d.feed.empty}</p>
+          {!search && account.role === "team" && (
+            <>
+              <p className="small">{d.feed.emptyHint}</p>
+              <Link href="/new" className="btn btn-primary">
+                + {d.nav.newModel}
+              </Link>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cards">
+          {models.map((model) => (
+            <ModelCard key={model.id} model={model} lang={lang} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
