@@ -4,6 +4,8 @@ A private, GitHub-style social site for a 3D modeling hackathon. Teams upload th
 give each version a name, keep uploading new versions as it progresses, and review each
 other's models. Organizers see everything.
 
+Live at **<https://3d-marathon.vercel.app>**.
+
 Runs entirely on free tiers, no credit card: **Next.js on Vercel · Neon Postgres ·
 Google Drive for files**.
 
@@ -89,9 +91,12 @@ Two decisions carry most of the weight:
 1. **Postgres holds the index, Drive holds the bytes.** Comments, likes and scores need
    concurrent, transactional writes, which a folder of JSON files cannot do safely. Drive
    gives 15 GB of free space and a folder tree an organizer can browse by hand.
-2. **Uploads never touch the server.** Vercel caps a request body at 4.5 MB. The server
-   opens a Drive resumable session and hands the browser the session URI, so a 150 MB
-   `.blend` goes straight to Google in 8 MB chunks and resumes after a dropped connection.
+2. **Uploads never touch the server.** A 150 MB `.blend` is larger than a serverless
+   request body may be (Vercel allows 100 MB today, and allowed only 4.5 MB when this
+   was built), and proxying that much data through a function would be wasteful even
+   where it fits. The server opens a Drive resumable session and hands the browser the
+   session URI, so the bytes go straight to Google in 8 MB chunks and resume after a
+   dropped connection.
 
 ### Layout
 

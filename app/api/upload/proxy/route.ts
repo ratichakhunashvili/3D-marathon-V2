@@ -8,6 +8,7 @@ import { uploadSmallFile, DriveNotConnected } from "@/lib/drive";
  * Only used when a browser blocks the direct PUT, and capped well under Vercel's
  * 4.5 MB request-body limit — anything larger has to take the direct route.
  */
+// 60s is ample for the <=4 MB this path accepts; the platform ceiling is 300s.
 export const maxDuration = 60;
 
 const LIMIT = 4 * 1024 * 1024;

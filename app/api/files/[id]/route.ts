@@ -11,9 +11,11 @@ import { DISPLAYABLE_IMAGE } from "@/lib/filetypes";
  * files stay private to the event. Range requests are forwarded so the 3D viewer and
  * <video> can seek instead of downloading whole files.
  */
-// Big source files stream through this function, so ask for the longest window the
-// free Vercel plan allows. See docs/DEPLOY.md for the limits this implies.
-export const maxDuration = 60;
+// Big source files stream through this function, so ask for the longest window
+// available. Vercel's ceiling is 300s on all plans now, which is five times the
+// old limit — a 150 MB .blend on a slow connection is far less likely to be cut
+// off mid-download. See docs/DEPLOY.md.
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const viewer = await currentAccount();

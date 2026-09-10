@@ -1,5 +1,10 @@
 # Putting ModelHub online (free)
 
+**Live at <https://3d-marathon.vercel.app>** — project `3d-marathon` in the
+`ratichakhunashvilis-projects` scope, connected to
+<https://github.com/ratichakhunashvili/3D-marathon-V2>, so every push to `main`
+redeploys automatically.
+
 The whole stack stays inside free tiers:
 
 | Piece | Service | Free allowance | Card needed |
@@ -57,13 +62,23 @@ git push -u origin main
 
 ## 3. Point Google at the deployed URL
 
-1. Note your real Vercel URL (e.g. `https://modelhub-abc123.vercel.app`).
-2. If it differs from what you typed above, fix `GOOGLE_REDIRECT_URI` and `APP_BASE_URL`
-   in Vercel → Settings → Environment Variables, then **redeploy**.
-3. In Google Cloud → Credentials → your OAuth client, add the production redirect URI:
-   `https://YOUR-APP.vercel.app/api/drive/callback`
-4. Open `https://YOUR-APP.vercel.app/admin/settings`, log in as admin, and press
-   **Connect Google Drive** once more so the token is stored for production.
+All seven environment variables are already set on the project, and
+`APP_BASE_URL` / `GOOGLE_REDIRECT_URI` already point at https://3d-marathon.vercel.app.
+What remains is the one thing that can only be done in Google's console:
+
+1. Open <https://console.cloud.google.com/auth/clients> as the account that owns
+   the `3D Marathon` folder (`r.chakhunashvili@skillwill.edu.ge`).
+2. Open the ModelHub OAuth client and add this **Authorised redirect URI**, exactly:
+
+   ```
+   https://3d-marathon.vercel.app/api/drive/callback
+   ```
+
+   Keep `http://localhost:3100/api/drive/callback` alongside it for local work.
+3. Then open <https://3d-marathon.vercel.app/admin/settings>, log in as admin, and press **Test connection**.
+
+Until step 2 is done, existing uploads keep working on the refresh token already in
+the database, but pressing **Reconnect** will fail with `redirect_uri_mismatch`.
 
 ## 4. Before the event
 
@@ -77,13 +92,15 @@ git push -u origin main
 
 ## Free-tier limits worth knowing
 
-**Uploads bypass the server entirely.** Vercel refuses request bodies over 4.5 MB, so the
-browser opens a resumable session and PUTs bytes straight to Google. A dropped connection
-resumes from the last confirmed byte rather than starting over.
+**Uploads bypass the server entirely.** Vercel's request-body limit is 100 MB (it was
+4.5 MB when this was written), still under the 150 MB per-file cap — and streaming that
+much through a function would be wasteful regardless. The browser opens a resumable
+session and PUTs bytes straight to Google, and a dropped connection resumes from the last
+confirmed byte rather than starting over.
 
 **Downloads do pass through the server**, because files stay private to logged-in users.
-A serverless function on the free plan may run for 60 seconds, so a very large file on a
-very slow connection can time out mid-download. In practice reviewers only pull the small
+A function may run for 300 seconds (`maxDuration` in `app/api/files/[id]/route.ts`), so
+only a very large file on a very slow connection can now time out mid-download. In practice reviewers only pull the small
 `.glb` and the screenshots, which are fast. Organizers and the owning team also get an
 **Open in Drive** link on every model, which downloads directly from Google with no limit.
 If this ever becomes a problem, lower the per-file cap in `/admin/settings`.
