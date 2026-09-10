@@ -2,13 +2,15 @@
 
 The site is live at **<https://hackathon-f160f.web.app>** — share that link.
 
-Firebase project: `hackathon-f160f` (Blaze plan). There are two deployment paths
-set up, and they are independent:
+Firebase project: `hackathon-f160f` (Blaze plan).
+Source: <https://github.com/ratichakhunashvili/3D-marathon-V2>
+
+There are two deployment paths set up, and they are independent:
 
 | Path | What serves the app | Deploy trigger | Status |
 | --- | --- | --- | --- |
 | **Cloud Run + Firebase Hosting** | Cloud Run service `modelhub-web` | one command, from this folder | **live now** |
-| **Firebase App Hosting** | backend `modelhub` | automatic, on git push | configured, needs GitHub |
+| **Firebase App Hosting** | backend `modelhub` | automatic, on git push | created, not serving — see below |
 
 ---
 
@@ -111,21 +113,44 @@ Already done for you:
 - `apphosting.yaml` at the repo root, pointing at
   `https://modelhub--hackathon-f160f.us-central1.hosted.app`
 
-App Hosting only builds from a Git repository, so to finish it:
+**This backend is not serving anything yet.** Two ways to finish it, and both
+have a catch:
 
-1. Create a private GitHub repo and push this folder to it.
-2. In the [App Hosting console](https://console.firebase.google.com/project/hackathon-f160f/apphosting),
-   open the `modelhub` backend and connect that repository (this needs a
-   browser — it installs Firebase's GitHub app).
-3. Roll out:
+*Deploy from a connected GitHub repo (the intended path).* The code is already
+on GitHub at <https://github.com/ratichakhunashvili/3D-marathon-V2>, so:
+
+1. In the [App Hosting console](https://console.firebase.google.com/project/hackathon-f160f/apphosting),
+   open the `modelhub` backend and connect that repository. This step needs a
+   browser — it installs Firebase's GitHub app — and there is no CLI
+   equivalent, which is why it is not already done.
+2. Roll out:
 
    ```bash
    firebase apphosting:rollouts:create modelhub --git-branch main --project hackathon-f160f
    ```
 
-4. Add `https://modelhub--hackathon-f160f.us-central1.hosted.app/api/drive/callback`
+3. Add `https://modelhub--hackathon-f160f.us-central1.hosted.app/api/drive/callback`
    to the OAuth client too, and set `APP_BASE_URL` in `apphosting.yaml` to
    whichever URL you settle on.
+
+*Deploy from local source.* Adding an `apphosting` block to `firebase.json`
+(`backendId`, `rootDir`, `ignore`) makes `firebase deploy --only apphosting`
+upload this folder directly, no GitHub needed. It was tried and **the build
+fails**: the Node.js buildpack exits 51 inside the CNB lifecycle, and the log
+is not retrievable through `gcloud builds log`, Cloud Logging or a logs bucket —
+only through the Cloud Build console. Removing `package-lock.json` from the
+upload (to rule out the lockfile problem below) did not change it. The most
+likely cause is `output: "standalone"` in `next.config.ts`, which the Cloud Run
+image needs but which App Hosting's own Next adapter may not expect. If you
+want to chase it, read the log in the console first:
+
+<https://console.cloud.google.com/cloud-build/builds;region=us-central1?project=495241590412>
+
+The `apphosting` block is deliberately **not** in `firebase.json` right now, so
+that a plain `firebase deploy` cannot fail on it.
+
+Note that connecting GitHub buys automatic redeploys on push; it is not needed
+for the site to be up, because Cloud Run already serves it.
 
 After that every push to `main` redeploys automatically. If you decide to use
 App Hosting as the real deployment, delete the Cloud Run service and the
