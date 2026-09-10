@@ -184,6 +184,15 @@ insert into drive_auth (id) values (1) on conflict (id) do nothing;
 -- false = the app created its own folder (the narrow `drive.file` scope is enough)
 alter table drive_auth add column if not exists root_is_external boolean not null default false;
 
+-- ============================================================ later indexes
+-- Added after the first deploy, for paths that turned out to scan:
+--   comments(author_id)          -> "reviews given" per team, and the CSV export
+--   rubric_submissions(reviewer_id) -> reviewer joins in the score export
+--   versions(created_at)         -> the admin dashboard's 10-day sparkline
+create index if not exists comments_author_idx on comments(author_id) where deleted_at is null;
+create index if not exists rubric_submissions_reviewer_idx on rubric_submissions(reviewer_id);
+create index if not exists versions_created_idx on versions(created_at desc);
+
 -- Deferred FKs (files is created after models/versions)
 do $$
 begin

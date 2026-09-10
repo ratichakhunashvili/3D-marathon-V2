@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { currentAccount, currentLang } from "@/lib/session";
 import { dict } from "@/lib/i18n";
@@ -14,7 +15,19 @@ export default async function LoginPage() {
   return (
     <div style={{ maxWidth: 400, margin: "6vh auto" }}>
       <div className="center stack-sm" style={{ marginBottom: 22 }}>
-        <h1>{settings.event_name}</h1>
+        {/* The logo stands in for the page title, so it stays inside the h1. */}
+        <h1 style={{ margin: 0 }}>
+          {/* Matches the .login-logo max-width; Next serves this and a 2x
+              variant rather than upscaling the source. */}
+          <Image
+            src="/logo.png"
+            alt={settings.event_name}
+            width={330}
+            height={239}
+            className="login-logo"
+            preload
+          />
+        </h1>
         <p className="muted small">{d.login.subtitle}</p>
       </div>
 

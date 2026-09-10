@@ -30,9 +30,11 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
   const [models, used, summaries] = await Promise.all([
     feedModels({ teamId: team.id, includeHidden: isSelf || isAdmin, limit: 100 }),
     teamStorageUsed(team.id),
-    teamSummaries(true),
+    // Scoped to this team: rolling up every team in the event to render one
+    // profile was the most expensive query on the page.
+    teamSummaries(true, team.id),
   ]);
-  const stats = summaries.find((s) => s.id === team.id);
+  const stats = summaries[0];
   const maxTeam = Number(settings.max_team_bytes);
 
   return (

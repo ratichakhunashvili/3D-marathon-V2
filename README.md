@@ -4,7 +4,9 @@ A private, GitHub-style social site for a 3D modeling hackathon. Teams upload th
 give each version a name, keep uploading new versions as it progresses, and review each
 other's models. Organizers see everything.
 
-Runs entirely on free tiers: **Next.js on Vercel · Neon Postgres · Google Drive for files**.
+Live at **<https://hackathon-f160f.web.app>**.
+
+**Next.js on Cloud Run behind Firebase Hosting · Neon Postgres · Google Drive for files.**
 
 ---
 
@@ -19,7 +21,8 @@ npm run dev          # http://localhost:3100
 Then connect Google Drive — **uploads do not work until you do**:
 see [docs/SETUP-GOOGLE-DRIVE.md](docs/SETUP-GOOGLE-DRIVE.md) (~10 minutes, no card).
 
-Deploying: [docs/DEPLOY.md](docs/DEPLOY.md).
+Deploying: [docs/DEPLOY-FIREBASE.md](docs/DEPLOY-FIREBASE.md) (this is what is live).
+The original Vercel route is still documented in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 Your admin username and password are in `.env.local` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 Change the password at `/profile` after the first login.
@@ -38,7 +41,8 @@ Change the password at `/profile` after the first login.
 
 **Teams are accounts.** An organizer registers each team with a name and gets a generated
 password to hand over. There is no public sign-up. Teams can change their password and pick
-an icon on their profile — 48 generated 3D icons, or their own image.
+an icon on their profile — 48 animated animal icons drawn in the logo's yellow
+palette, or their own image.
 
 **A model is like a repository, a version is like a commit.** A team creates a model
 (`Medieval lantern`), and every upload after that is a named version (`v1 blockout`,
@@ -70,7 +74,7 @@ them. Georgian is the default. Team names written in Georgian get readable URLs
 ## Architecture
 
 ```
-Browser ──── page + form actions ────► Next.js on Vercel ────► Neon Postgres
+Browser ──── page + form actions ────► Next.js on Cloud Run ──► Neon Postgres
    │                                          (index: teams, models,
    │                                           versions, reviews, log)
    └──── file bytes, resumable PUT ────► Google Drive
@@ -84,7 +88,8 @@ Two decisions carry most of the weight:
 1. **Postgres holds the index, Drive holds the bytes.** Comments, likes and scores need
    concurrent, transactional writes, which a folder of JSON files cannot do safely. Drive
    gives 15 GB of free space and a folder tree an organizer can browse by hand.
-2. **Uploads never touch the server.** Vercel caps a request body at 4.5 MB. The server
+2. **Uploads never touch the server.** Serverless platforms cap request bodies (4.5 MB on
+   Vercel; Cloud Run is more generous but still proxied). The server
    opens a Drive resumable session and hands the browser the session URI, so a 150 MB
    `.blend` goes straight to Google in 8 MB chunks and resumes after a dropped connection.
 
@@ -108,7 +113,7 @@ lib/
   db.ts queries.ts            Neon HTTP driver + every read query in one place
   drive.ts upload-client.ts    Drive REST (server) and chunked upload (browser)
   session.ts password.ts crypto.ts   scrypt hashes, cookie sessions, AES-GCM for the token
-  i18n.ts avatars.ts filetypes.ts    ka/en strings, 48 generated icons, format table
+  i18n.ts avatars.ts filetypes.ts    ka/en strings, 48 animated icons, format table
 components/
   ModelViewer.tsx             three.js viewport, loaders imported on demand
   UploadForm.tsx  Scorecard.tsx  CommentThread.tsx  ModelCard.tsx  Avatar.tsx
@@ -122,8 +127,12 @@ scripts/                      migrate · seed · healthcheck
   unknown account so timing does not reveal which names exist.
 - Sessions are random 256-bit tokens; only their SHA-256 is stored, in an HttpOnly cookie.
 - The Google refresh token is encrypted with AES-256-GCM using `APP_SECRET`.
-- The OAuth scope is `drive.file`, so the app can only ever touch files it created — never
-  the rest of the owner's Drive.
+- The OAuth scope depends on where uploads go: `drive.file` (the app sees only files it
+  created) when the app manages its own folder, but the broader `drive` scope when an
+  organizer pins a folder that already existed — Drive returns 404 for a parent the app
+  did not create. This install pins `3D Marathon`, so it uses the broader scope;
+  `npm run check` prints which one is in use, and docs/SETUP-GOOGLE-DRIVE.md explains how
+  to get back to the narrow one.
 - Every file request is authenticated, and hidden or deleted work is served only to its own
   team and to organizers.
 - Uploads are limited to an allowlist of 3D, image, archive and document extensions, so the

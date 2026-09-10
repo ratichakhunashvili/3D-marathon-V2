@@ -1,5 +1,9 @@
 # Putting ModelHub online (free)
 
+> **The site is currently deployed on Firebase, not Vercel.**
+> See [DEPLOY-FIREBASE.md](DEPLOY-FIREBASE.md). This document is kept as the
+> no-credit-card alternative — Vercel Hobby needs no card, Firebase Blaze does.
+
 The whole stack stays inside free tiers:
 
 | Piece | Service | Free allowance | Card needed |

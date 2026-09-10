@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { currentLang } from "@/lib/session";
 import { dict } from "@/lib/i18n";
-import { recentActivity, teamSummaries } from "@/lib/queries";
+import { recentActivity, teamNames } from "@/lib/queries";
 import { absoluteDateTime } from "@/lib/format";
 
 export default async function AdminActivityPage({
@@ -9,7 +9,8 @@ export default async function AdminActivityPage({
 }: {
   searchParams: Promise<{ team?: string }>;
 }) {
-  const [lang, params, teams] = await Promise.all([currentLang(), searchParams, teamSummaries(true)]);
+  // The dropdown only needs names, not the per-team rollups.
+  const [lang, params, teams] = await Promise.all([currentLang(), searchParams, teamNames()]);
   const d = dict(lang).admin.activity;
 
   const teamId = params.team && /^[0-9a-f-]{36}$/i.test(params.team) ? params.team : null;

@@ -1,0 +1,75 @@
+# Firebase App Hosting — https://firebase.google.com/docs/app-hosting/configure
+#
+# App Hosting detects Next.js, runs `npm run build`, and serves the result on
+# Cloud Run. Everything below is read from this file at build and rollout time.
+#
+# Secrets are *references*, not values: the name after `secret:` is a Cloud
+# Secret Manager secret created with
+#   firebase apphosting:secrets:set NAME
+# so nothing sensitive is ever committed. See docs/DEPLOY-FIREBASE.md.
+
+runConfig:
+  # A hackathon-sized event: a couple of instances is plenty, and scaling to
+  # zero keeps an idle deployment free. The trade is a ~1-2s cold start on the
+  # first request after a quiet spell (Neon also wakes in about a second).
+  # Set minInstances: 1 to remove that, at the cost of a permanently billed
+  # instance.
+  minInstances: 0
+  maxInstances: 2
+  cpu: 1
+  memoryMiB: 1024
+  # Next.js handles many requests per instance happily.
+  concurrency: 80
+
+env:
+  # ---------------------------------------------------------------- public
+  # Absolute links and the OAuth redirect must both match the deployed origin.
+  # This is the backend's own URL; if you attach a custom domain later, change
+  # both of these and re-add the redirect URI in Google Cloud Console.
+  - variable: APP_BASE_URL
+    value: https://modelhub--hackathon-f160f.us-central1.hosted.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: GOOGLE_REDIRECT_URI
+    value: https://modelhub--hackathon-f160f.us-central1.hosted.app/api/drive/callback
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Pinned Drive folder ("3D Marathon"). Not a secret — it is just a folder id,
+  # and the app can only reach it with the connected account's token.
+  - variable: GOOGLE_DRIVE_ROOT_ID
+    value: 1pF2Z7BaO_m0oZtJndE8Y4KJGPvrKyqx0
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # ---------------------------------------------------------------- secrets
+  # DATABASE_URL is needed at BUILD as well as RUNTIME: lib/db.ts throws on
+  # import when it is missing, and `next build` imports it while collecting
+  # page data. The Neon driver does not open a connection at import time, so
+  # the database does not have to be reachable during the build — only set.
+  - variable: DATABASE_URL
+    secret: DATABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Signs session cookies and encrypts the stored Google refresh token. Must be
+  # the same value as locally, or Drive has to be reconnected after deploying.
+  - variable: APP_SECRET
+    secret: APP_SECRET
+    availability:
+      - RUNTIME
+
+  - variable: GOOGLE_CLIENT_ID
+    secret: GOOGLE_CLIENT_ID
+    availability:
+      - RUNTIME
+
+  - variable: GOOGLE_CLIENT_SECRET
+    secret: GOOGLE_CLIENT_SECRET
+    availability:
+      - RUNTIME

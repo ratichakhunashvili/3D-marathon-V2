@@ -239,7 +239,12 @@ export type TeamSummary = {
   is_quiet: boolean;
 };
 
-export async function teamSummaries(includeDisabled = true): Promise<TeamSummary[]> {
+/**
+ * Per-team rollups. Seven correlated subqueries per row, so pass `teamId` when
+ * you only need one team — /t/[slug] used to compute the whole event's numbers
+ * to render a single profile.
+ */
+export async function teamSummaries(includeDisabled = true, teamId?: string): Promise<TeamSummary[]> {
   return rows<TeamSummary>(
     await sql`
       select a.id, a.name, a.slug, a.avatar_type, a.avatar_value, a.is_disabled,
@@ -271,9 +276,19 @@ export async function teamSummaries(includeDisabled = true): Promise<TeamSummary
         join models m6 on m6.id = v4.model_id
         where m6.team_id = a.id and v4.deleted_at is null
       ) lu on true
-      where a.role = 'team' and (${includeDisabled} or a.is_disabled = false)
+      where a.role = 'team'
+        and (${includeDisabled} or a.is_disabled = false)
+        and (${teamId ?? null}::uuid is null or a.id = ${teamId ?? null}::uuid)
       order by a.name
     `,
+  );
+}
+
+/** Just the id/name pairs — for the activity page's filter dropdown, which does
+ *  not need any of the rollups `teamSummaries` computes. */
+export async function teamNames(): Promise<{ id: string; name: string }[]> {
+  return rows<{ id: string; name: string }>(
+    await sql`select id, name from accounts where role = 'team' order by name`,
   );
 }
 
@@ -387,18 +402,38 @@ export async function modelScores(): Promise<ModelScore[]> {
   );
 }
 
-/** Per-criterion averages for one model, for the admin score detail. */
-export async function criterionAverages(modelId: string) {
-  return rows<{ criterion_id: string; label_en: string; label_ka: string; max_score: number; avg: number | null; n: number }>(
+export type CriterionAverage = {
+  model_id: string;
+  criterion_id: string;
+  label_en: string;
+  label_ka: string;
+  max_score: number;
+  avg: number | null;
+  n: number;
+};
+
+/**
+ * Per-criterion averages for many models at once, for the admin score detail.
+ * Takes every model in one query — the page previously issued one round trip
+ * per model, which on Neon's HTTP driver meant up to 40 separate requests.
+ * Each model still gets a row per active criterion (avg null when unscored),
+ * hence the cross join.
+ */
+export async function criterionAveragesFor(modelIds: string[]): Promise<CriterionAverage[]> {
+  if (!modelIds.length) return [];
+  return rows<CriterionAverage>(
     await sql`
-      select rc.id as criterion_id, rc.label_en, rc.label_ka, rc.max_score,
+      with wanted as (select unnest(${modelIds}::uuid[]) as model_id)
+      select w.model_id::text as model_id, rc.id as criterion_id,
+             rc.label_en, rc.label_ka, rc.max_score,
              round(avg(sc.score), 1)::float8 as avg, count(sc.score)::int as n
-      from rubric_criteria rc
-      left join rubric_scores sc on sc.criterion_id = rc.id
-      left join rubric_submissions s on s.id = sc.submission_id and s.model_id = ${modelId}
-      where rc.is_active = true and (s.id is not null or sc.submission_id is null)
-      group by rc.id, rc.label_en, rc.label_ka, rc.max_score, rc.sort_order
-      order by rc.sort_order
+      from wanted w
+      cross join rubric_criteria rc
+      left join rubric_submissions s on s.model_id = w.model_id
+      left join rubric_scores sc on sc.submission_id = s.id and sc.criterion_id = rc.id
+      where rc.is_active = true
+      group by w.model_id, rc.id, rc.label_en, rc.label_ka, rc.max_score, rc.sort_order
+      order by w.model_id, rc.sort_order
     `,
   );
 }

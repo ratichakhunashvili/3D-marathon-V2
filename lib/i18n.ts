@@ -9,7 +9,6 @@ export function normalizeLang(value: string | undefined | null): Lang {
 
 const en = {
   langName: "English",
-  brandTagline: "3D modeling hackathon",
   nav: {
     feed: "Feed",
     teams: "Teams",
@@ -278,7 +277,6 @@ const en = {
 
 const ka: typeof en = {
   langName: "ქართული",
-  brandTagline: "3D მოდელირების ჰაკათონი",
   nav: {
     feed: "ნაკადი",
     teams: "გუნდები",

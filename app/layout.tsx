@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 import { currentAccount, currentLang } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
@@ -24,12 +25,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <header className="topbar">
           <div className="topbar-inner">
-            <Link href="/" className="brand">
-              <span className="brand-mark">◈</span>
-              <span>
-                {settings.event_name}
-                <small>{d.brandTagline}</small>
-              </span>
+            {/* The logo carries the event name already, so it stands alone here.
+                alt falls back to whatever the organizer set in /admin/settings. */}
+            <Link href="/" className="brand" aria-label={settings.event_name}>
+              {/* Sized to how it actually renders (52px tall), not to the
+                  source's 880px — Next builds the srcset from these numbers,
+                  so oversized props make it generate upscaled variants that
+                  are larger than the original file. */}
+              <Image
+                src="/logo.png"
+                alt={settings.event_name}
+                width={72}
+                height={52}
+                className="brand-logo"
+                loading="eager"
+              />
             </Link>
 
             {account && (

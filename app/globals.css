@@ -1,27 +1,53 @@
-/* ModelHub — dark by design: renders and 3D viewports read better against a dark ground. */
+/* ModelHub — themed from the 3D Marathon logo: yellow, white and black.
+ *
+ * The palette is sampled straight out of Logo.png: #f7d20e is the mascot's
+ * yellow, #e0a000 its shading, #000 the heavy cartoon outline. Yellow only
+ * ever *fills* — at 1.5:1 against white it cannot carry text — so anything
+ * sitting on it uses --accent-ink (black), and yellow-coloured text uses
+ * --accent-text (a deep amber that passes AA on a light ground).
+ *
+ * The one deliberately dark surface is the 3D viewport: renders read better
+ * against a dark ground, and near-black is in the logo's palette anyway.
+ */
 
 :root {
-  --bg: #0a0c11;
-  --bg-elev: #11141c;
-  --surface: #161a24;
-  --surface-2: #1c212d;
-  --border: #262c3a;
-  --border-strong: #354055;
-  --text: #e8ebf2;
-  --text-dim: #9aa4ba;
-  --text-faint: #6b7488;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-soft: rgba(99, 102, 241, 0.14);
-  --cyan: #22d3ee;
-  --green: #34d399;
-  --amber: #fbbf24;
-  --red: #f87171;
+  /* brand */
+  --yellow: #f7d20e;
+  --yellow-hi: #ffe14a;
+  --yellow-deep: #e0a000;
+  --yellow-tint: #fff6cc;
+
+  /* ground & surfaces */
+  --bg: #fffdf3;
+  --bg-elev: #fffbe9;
+  --surface: #ffffff;
+  --surface-2: #fffae4;
+  --border: #eee2b8;
+  --border-strong: #dcc98d;
+
+  /* ink */
+  --text: #16150e;
+  --text-dim: #6b6350;
+  --text-faint: #7f7660;
+
+  /* accents */
+  --accent: var(--yellow);
+  --accent-hover: var(--yellow-hi);
+  --accent-ink: #16150e;
+  --accent-text: #8a6b00;
+  --accent-soft: rgba(247, 210, 14, 0.22);
+  --ring: rgba(224, 160, 0, 0.35);
+
+  --green: #1f8a4c;
+  --amber: #a86a00;
+  --red: #c62828;
+
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow: 0 8px 30px rgba(90, 70, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(90, 70, 0, 0.07);
   --maxw: 1180px;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -52,7 +78,8 @@ a {
 }
 
 a.link {
-  color: var(--accent-hover);
+  color: var(--accent-text);
+  font-weight: 550;
 }
 
 a.link:hover {
@@ -107,9 +134,11 @@ pre,
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(10, 12, 17, 0.86);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(10px);
+  /* The logo's signature: a black keyline over a yellow underscore. */
   border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 -3px 0 var(--yellow);
 }
 
 .topbar-inner {
@@ -122,32 +151,23 @@ pre,
   flex-wrap: wrap;
 }
 
+/* The logo is the whole brand lockup — it already carries the event name. */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
   margin-right: 6px;
-}
-
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: linear-gradient(140deg, var(--accent), var(--cyan));
-  display: grid;
-  place-items: center;
-  font-size: 15px;
   flex: none;
 }
 
-.brand small {
+.brand-logo {
   display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-faint);
-  letter-spacing: 0;
+  height: 52px;
+  width: auto;
+  transition: transform 0.15s;
+}
+
+.brand:hover .brand-logo {
+  transform: scale(1.03);
 }
 
 .nav {
@@ -172,13 +192,13 @@ pre,
 
 .nav a:hover,
 .nav button:hover {
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text);
 }
 
 .nav a.active {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 
 .spacer {
@@ -191,6 +211,7 @@ pre,
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-pad {
@@ -291,57 +312,83 @@ pre,
   gap: 7px;
   padding: 9px 15px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  border: 2.5px solid var(--accent-ink);
+  background: #fff;
   color: var(--text);
   font: inherit;
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.14s, border-color 0.14s, transform 0.06s;
+  transition: background 0.13s, box-shadow 0.13s, transform 0.13s;
   text-align: center;
+  box-shadow: 3px 3px 0 var(--border-strong);
 }
 
 .btn:hover:not(:disabled) {
-  background: #232939;
-  border-color: #43506b;
+  background: var(--surface-2);
+  box-shadow: 4px 4px 0 var(--yellow);
+  transform: translate(-1px, -1px);
 }
 
+/* Pressed: the button sits down flush onto its shadow. */
 .btn:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--yellow-deep);
+}
+
+.btn:focus-visible {
+  outline: 0;
+  box-shadow: 4px 4px 0 var(--yellow-deep);
+  transform: translate(-1px, -1px);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
+/* The logo's sticker look: yellow fill, black keyline, black text. */
 .btn-primary {
   background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--accent-ink);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  box-shadow: 4px 4px 0 var(--accent-ink);
 }
 
+/* Ghost keeps the flat, quiet role — no keyline, no slab. */
 .btn-ghost {
   background: transparent;
-  border-color: var(--border);
+  border-color: transparent;
+  border-width: 2.5px;
   color: var(--text-dim);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  box-shadow: none;
+  transform: none;
 }
 
 .btn-danger {
-  color: var(--red);
-  border-color: rgba(248, 113, 113, 0.35);
-  background: rgba(248, 113, 113, 0.08);
+  color: #fff;
+  border-color: var(--accent-ink);
+  background: var(--red);
+  box-shadow: 3px 3px 0 rgba(198, 40, 40, 0.35);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.16);
-  border-color: rgba(248, 113, 113, 0.5);
+  background: #a81f1f;
+  box-shadow: 4px 4px 0 rgba(198, 40, 40, 0.5);
 }
 
 .btn-sm {
@@ -360,19 +407,25 @@ label.field {
 
 label.field > span.label {
   display: block;
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--text-dim);
-  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 6px;
 }
 
 label.field > span.hint {
   display: block;
   font-size: 12px;
   color: var(--text-faint);
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
+/* Controls are built like the logo's lettering: a heavy black keyline with a
+ * hard offset behind it. No blur anywhere — the shadow is a solid slab that
+ * slides under the field on focus, so the whole form feels stamped on rather
+ * than drawn with hairlines. */
 input[type="text"],
 input[type="password"],
 input[type="number"],
@@ -382,38 +435,163 @@ input[type="file"],
 select,
 textarea {
   width: 100%;
-  padding: 9px 11px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: #0e1118;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 2.5px solid var(--accent-ink);
+  background: #fff;
   color: var(--text);
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
+  transition: box-shadow 0.13s, transform 0.13s, background 0.13s;
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #a89e80;
+  font-weight: 400;
+}
+
+input[type="text"]:hover:not(:disabled),
+input[type="password"]:hover:not(:disabled),
+input[type="number"]:hover:not(:disabled),
+input[type="search"]:hover:not(:disabled),
+input[type="datetime-local"]:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  box-shadow: 3px 3px 0 var(--yellow);
+}
+
+/* Focus: the field presses into its own shadow and the ground turns yellow. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 0;
+  background: var(--yellow-tint);
+  box-shadow: 5px 5px 0 var(--yellow-deep);
+  transform: translate(-1px, -1px);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--bg-elev);
+  border-color: var(--border-strong);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 textarea {
   resize: vertical;
-  min-height: 76px;
-  line-height: 1.5;
+  min-height: 82px;
+  line-height: 1.55;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-  border-color: var(--accent);
+/* Native select arrow is unstyleable, so draw our own — heavy, to match. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+  font-weight: 600;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2316150e' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 12px;
 }
 
+input[type="search"] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  cursor: pointer;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' fill='none' stroke='%237f7660' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.14s;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* File input: the browser's button is ugly, so make it match .btn. */
 input[type="file"] {
-  padding: 8px;
+  padding: 7px;
   cursor: pointer;
 }
 
+input[type="file"]::file-selector-button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  margin-right: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 2.5px solid var(--accent-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  transition: box-shadow 0.13s, transform 0.13s;
+  box-shadow: 2px 2px 0 var(--accent-ink);
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--yellow-hi);
+  box-shadow: 3px 3px 0 var(--accent-ink);
+  transform: translate(-1px, -1px);
+}
+
+/* Yellow box, black tick — a white tick on yellow would be invisible. */
 input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 21px;
+  height: 21px;
+  margin: 0;
+  border-radius: 6px;
+  border: 2.5px solid var(--accent-ink);
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.12s, box-shadow 0.12s, transform 0.12s;
+  box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  box-shadow: 2px 2px 0 var(--yellow);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent) center / 14px no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2.5 7.5 5.5 10.5 11.5 3.5' fill='none' stroke='%2316150e' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: 2px 2px 0 var(--yellow-deep);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 0;
+  box-shadow: 3px 3px 0 var(--yellow-deep);
+  transform: translate(-1px, -1px);
+}
+
+input[type="radio"] {
+  accent-color: var(--yellow-deep);
+  width: 17px;
+  height: 17px;
 }
 
 .inline-form {
@@ -436,53 +614,57 @@ input[type="checkbox"] {
 
 .chip-accent {
   background: var(--accent-soft);
-  border-color: rgba(99, 102, 241, 0.35);
-  color: var(--accent-hover);
+  border-color: var(--yellow-deep);
+  color: var(--accent-text);
 }
 
 .chip-green {
-  background: rgba(52, 211, 153, 0.12);
-  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(31, 138, 76, 0.1);
+  border-color: rgba(31, 138, 76, 0.3);
   color: var(--green);
 }
 
 .chip-amber {
-  background: rgba(251, 191, 36, 0.12);
-  border-color: rgba(251, 191, 36, 0.3);
+  background: var(--yellow-tint);
+  border-color: var(--border-strong);
   color: var(--amber);
 }
 
 .chip-red {
-  background: rgba(248, 113, 113, 0.12);
-  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(198, 40, 40, 0.08);
+  border-color: rgba(198, 40, 40, 0.28);
   color: var(--red);
 }
 
 .alert {
   padding: 11px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
+  border: 1.5px solid var(--border-strong);
+  border-left-width: 4px;
   background: var(--surface-2);
   font-size: 14px;
   margin-bottom: 14px;
 }
 
 .alert-error {
-  border-color: rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.1);
-  color: #fecaca;
+  border-color: rgba(198, 40, 40, 0.35);
+  border-left-color: var(--red);
+  background: rgba(198, 40, 40, 0.06);
+  color: #8e1f1f;
 }
 
 .alert-ok {
-  border-color: rgba(52, 211, 153, 0.4);
-  background: rgba(52, 211, 153, 0.1);
-  color: #a7f3d0;
+  border-color: rgba(31, 138, 76, 0.35);
+  border-left-color: var(--green);
+  background: rgba(31, 138, 76, 0.07);
+  color: #145c33;
 }
 
 .alert-warn {
-  border-color: rgba(251, 191, 36, 0.4);
-  background: rgba(251, 191, 36, 0.1);
-  color: #fde68a;
+  border-color: var(--border-strong);
+  border-left-color: var(--yellow-deep);
+  background: var(--yellow-tint);
+  color: #6d4a00;
 }
 
 .empty {
@@ -515,6 +697,157 @@ input[type="checkbox"] {
   object-fit: cover;
 }
 
+/* ---------------------------------------------------- animated preset icons
+ * Each animal gets the shared bob plus exactly one moving part. Only transform
+ * and opacity are animated, so these stay on the compositor and never trigger
+ * layout. transform-box: fill-box makes percentage/keyword origins resolve
+ * against the element's own box instead of the SVG user-space origin.
+ */
+.avatar svg [class^="av-"],
+.icon-pick svg [class^="av-"] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes av-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.7px);
+  }
+}
+
+@keyframes av-flutter {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-17deg);
+  }
+}
+
+@keyframes av-twitch {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0deg);
+  }
+  90% {
+    transform: rotate(-12deg);
+  }
+  95% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes av-blink {
+  0%,
+  91%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* The gecko's tongue darts straight down out of the mouth, so it grows on Y
+   from the top edge rather than sideways. */
+@keyframes av-flick {
+  0%,
+  78%,
+  100% {
+    transform: scaleY(0.05);
+    opacity: 0;
+  }
+  86% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes av-poke {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  45% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes av-pupil {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-1.4px);
+  }
+}
+
+.av-bob {
+  animation: av-bob 2.7s ease-in-out infinite;
+}
+.av-wing-l {
+  animation: av-flutter 0.3s ease-in-out infinite;
+  transform-origin: 88% 85%;
+}
+.av-wing-r {
+  animation: av-flutter 0.3s ease-in-out infinite reverse;
+  transform-origin: 12% 85%;
+}
+.av-ear,
+.av-ear-r {
+  animation: av-twitch 3.6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+.av-ear-r {
+  animation-delay: 0.45s;
+  animation-direction: reverse;
+}
+.av-blink {
+  animation: av-blink 4.1s ease-in-out infinite;
+}
+.av-tongue {
+  animation: av-flick 3.1s ease-in-out infinite;
+  transform-origin: center top;
+}
+.av-poke {
+  animation: av-poke 3.4s ease-in-out infinite;
+}
+.av-pupil {
+  animation: av-pupil 3.9s ease-in-out infinite;
+}
+.av-beak {
+  animation: av-twitch 4.4s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* The picker shows all 48 at once. Holding ~130 live animations there would
+ * cost more than it is worth, so they idle paused and play on hover/focus —
+ * which is exactly when someone is previewing one. */
+.icon-grid .avatar svg [class^="av-"],
+.icon-grid svg [class^="av-"] {
+  animation-play-state: paused;
+}
+
+.icon-pick:hover svg [class^="av-"],
+.icon-pick:focus-within svg [class^="av-"],
+.icon-pick.selected svg [class^="av-"] {
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar svg *,
+  .icon-pick svg * {
+    animation: none !important;
+  }
+}
+
 /* ------------------------------------------------------------------ model cards */
 
 .model-card {
@@ -528,18 +861,20 @@ input[type="checkbox"] {
 }
 
 .model-card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--yellow-deep);
   transform: translateY(-2px);
+  box-shadow: var(--shadow);
 }
 
 .thumb {
   aspect-ratio: 4 / 3;
   width: 100%;
-  background: linear-gradient(150deg, #131722, #1b2231);
+  background: linear-gradient(150deg, var(--yellow-tint), #fff9dd);
   display: grid;
   place-items: center;
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid var(--border);
 }
 
 .thumb img {
@@ -572,11 +907,11 @@ input[type="checkbox"] {
 .badge {
   padding: 2px 7px;
   border-radius: 6px;
-  background: rgba(10, 12, 17, 0.78);
-  border: 1px solid var(--border);
+  background: rgba(22, 21, 14, 0.82);
+  border: 1px solid rgba(22, 21, 14, 0.9);
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
+  font-weight: 700;
+  color: #fff;
   backdrop-filter: blur(4px);
 }
 
@@ -609,15 +944,18 @@ input[type="checkbox"] {
 
 /* ------------------------------------------------------------------ 3D viewer */
 
+/* Kept dark on purpose: renders and wireframes read far better against a dark
+ * ground, and near-black is the logo's own outline colour. */
 .viewer {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
   min-height: 260px;
-  background: radial-gradient(circle at 50% 40%, #1a2030 0%, #0b0e15 78%);
-  border: 1px solid var(--border);
+  background: radial-gradient(circle at 50% 38%, #423a22 0%, #17150d 80%);
+  border: 1.5px solid var(--accent-ink);
   border-radius: var(--radius);
   overflow: hidden;
+  color: #f3eeda;
 }
 
 .viewer canvas {
@@ -634,9 +972,16 @@ input[type="checkbox"] {
   place-items: center;
   text-align: center;
   padding: 22px;
-  color: var(--text-dim);
+  color: #e8e2cc;
   font-size: 14px;
   pointer-events: none;
+}
+
+/* The page's dim/faint inks are dark, so restate them for the dark viewport. */
+.viewer-overlay .muted,
+.viewer-overlay .faint,
+.viewer-hint {
+  color: #b8b09a;
 }
 
 .viewer-tools {
@@ -658,23 +1003,36 @@ input[type="checkbox"] {
 
 .viewer-hint {
   font-size: 11px;
-  color: var(--text-faint);
-  background: rgba(10, 12, 17, 0.7);
+  background: rgba(20, 19, 12, 0.72);
   padding: 3px 8px;
   border-radius: 6px;
 }
 
+/* The viewer's own buttons sit on the dark ground. */
+.viewer-tools .btn-ghost {
+  background: rgba(20, 19, 12, 0.72);
+  border-color: rgba(247, 210, 14, 0.4);
+  color: #f7edc8;
+}
+
+.viewer-tools .btn-ghost:hover:not(:disabled) {
+  background: rgba(247, 210, 14, 0.2);
+  border-color: var(--yellow);
+  color: #fff;
+}
+
 .progress {
-  height: 5px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--surface-2);
+  background: var(--yellow-tint);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
 .progress > i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--cyan));
+  background: linear-gradient(90deg, var(--yellow-deep), var(--yellow));
   transition: width 0.2s;
 }
 
@@ -707,7 +1065,7 @@ input[type="checkbox"] {
 
 .version-item.active {
   background: var(--accent-soft);
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: var(--yellow-deep);
 }
 
 .version-num {
@@ -726,8 +1084,8 @@ input[type="checkbox"] {
 
 .version-item.active .version-num {
   background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
 }
 
 /* ------------------------------------------------------------------ files & comments */
@@ -835,9 +1193,9 @@ table.tbl th {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-faint);
-  font-weight: 650;
-  background: var(--bg-elev);
+  color: var(--text-dim);
+  font-weight: 700;
+  background: var(--yellow-tint);
   white-space: nowrap;
 }
 
@@ -846,7 +1204,7 @@ table.tbl tr:last-child td {
 }
 
 table.tbl tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-elev);
 }
 
 .num {
@@ -895,14 +1253,12 @@ table.tbl tbody tr:hover td {
 .spark i {
   flex: 1;
   min-width: 3px;
-  background: var(--accent);
+  background: var(--yellow-deep);
   border-radius: 2px 2px 0 0;
-  opacity: 0.85;
 }
 
 .spark i.zero {
-  background: var(--border-strong);
-  opacity: 1;
+  background: var(--border);
 }
 
 /* ------------------------------------------------------------------ rubric */
@@ -933,30 +1289,38 @@ table.tbl tbody tr:hover td {
 }
 
 .score-pills label {
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  width: 31px;
+  height: 31px;
+  border-radius: 8px;
+  border: 2.5px solid var(--accent-ink);
+  background: #fff;
   display: grid;
   place-items: center;
   font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  color: var(--text-dim);
+  color: var(--text);
   position: relative;
   font-variant-numeric: tabular-nums;
+  transition: background 0.12s, box-shadow 0.12s, transform 0.12s;
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .score-pills label:hover {
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--yellow-tint);
+  box-shadow: 2px 2px 0 var(--yellow);
 }
 
 .score-pills input:checked + label {
   background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 650;
+  color: var(--accent-ink);
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--accent-ink);
+}
+
+.score-pills input:focus-visible + label {
+  box-shadow: 3px 3px 0 var(--yellow-deep);
+  transform: translate(-1px, -1px);
 }
 
 /* ------------------------------------------------------------------ misc */
@@ -980,20 +1344,23 @@ table.tbl tbody tr:hover td {
 }
 
 .dropzone {
-  border: 2px dashed var(--border-strong);
+  border: 3px dashed var(--accent-ink);
   border-radius: var(--radius);
-  padding: 26px 18px;
+  padding: 28px 18px;
   text-align: center;
   color: var(--text-dim);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--border-strong);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s, color 0.15s;
 }
 
 .dropzone:hover,
 .dropzone.over {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--yellow-tint);
   color: var(--text);
+  box-shadow: 6px 6px 0 var(--yellow-deep);
+  transform: translate(-1px, -1px);
 }
 
 .icon-grid {
@@ -1014,12 +1381,21 @@ table.tbl tbody tr:hover td {
 }
 
 .icon-pick:hover {
-  border-color: var(--border-strong);
+  border-color: var(--yellow-deep);
 }
 
 .icon-pick.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+/* Login is the one place the logo gets to be the hero. */
+.login-logo {
+  display: block;
+  width: 100%;
+  max-width: 330px;
+  height: auto;
+  margin: 0 auto;
 }
 
 .tabs {
@@ -1041,11 +1417,13 @@ table.tbl tbody tr:hover td {
 
 .tabs a:hover {
   color: var(--text);
+  border-bottom-color: var(--border-strong);
 }
 
 .tabs a.active {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent);
+  color: var(--text);
+  font-weight: 700;
+  border-bottom-color: var(--yellow);
 }
 
 .split {
@@ -1075,5 +1453,11 @@ table.tbl tbody tr:hover td {
   }
   .sticky {
     position: static;
+  }
+  .brand-logo {
+    height: 36px;
+  }
+  .login-logo {
+    max-width: 260px;
   }
 }

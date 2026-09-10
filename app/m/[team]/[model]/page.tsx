@@ -70,8 +70,11 @@ export default async function ModelPage({
 
   if (versions.length === 0) notFound();
 
-  const files = await filesOfVersions(versions.map((v) => v.id));
-  const scorecard = isOwner ? null : await myScorecard(model.id, account.id);
+  // Independent of each other, so they share one round trip rather than two.
+  const [files, scorecard] = await Promise.all([
+    filesOfVersions(versions.map((v) => v.id)),
+    isOwner ? Promise.resolve(null) : myScorecard(model.id, account.id),
+  ]);
 
   const requested = query.v ? Number(query.v) : NaN;
   const selected = versions.find((v) => v.number === requested) ?? versions[0];

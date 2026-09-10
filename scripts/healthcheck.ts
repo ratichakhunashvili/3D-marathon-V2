@@ -9,11 +9,12 @@ import {
   commentsOfModel,
   teamSummaries,
   teamBySlug,
+  teamNames,
   activeCriteria,
   allCriteria,
   myScorecard,
   modelScores,
-  criterionAverages,
+  criterionAveragesFor,
   recentActivity,
   uploadsPerDay,
   globalStats,
@@ -47,8 +48,10 @@ await check("feed (one team, hidden)", () =>
   feedModels({ teamId: NIL_UUID, includeHidden: true, includeDeleted: true }),
 );
 await check("teams", () => teamSummaries(true));
+await check("teams (one team)", () => teamSummaries(true, NIL_UUID));
 await check("teams (enabled only)", () => teamSummaries(false));
 await check("team by slug", () => teamBySlug("nobody"));
+await check("team names", () => teamNames());
 await check("model by slug", () => modelBySlug("nobody", "nothing"));
 await check("versions", () => versionsOfModel(NIL_UUID, NIL_UUID));
 await check("files", () => filesOfVersions([NIL_UUID]));
@@ -57,7 +60,7 @@ await check("rubric (active)", () => activeCriteria());
 await check("rubric (all)", () => allCriteria());
 await check("scorecard", () => myScorecard(NIL_UUID, NIL_UUID));
 await check("scores", () => modelScores());
-await check("criterion averages", () => criterionAverages(NIL_UUID));
+await check("criterion averages", () => criterionAveragesFor([NIL_UUID]));
 await check("activity", () => recentActivity(10));
 await check("activity (per team)", () => recentActivity(10, NIL_UUID));
 await check("uploads per day", () => uploadsPerDay(10));

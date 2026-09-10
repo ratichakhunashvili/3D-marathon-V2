@@ -1,0 +1,28 @@
+# Keep the Cloud Build upload small and, above all, keep secrets out of it.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+out
+build
+.git
+.gitignore
+
+# Source artwork for the brand assets. The app ships the processed versions in
+# public/ and app/, so these ~1.3 MB originals are not needed in the image.
+Logo.png
+icon.png
+
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
+.vercel
+.firebase
+
+# Documentation and one-off maintenance scripts are not part of the runtime.
+docs
+README.md
+AGENTS.md
+CLAUDE.md

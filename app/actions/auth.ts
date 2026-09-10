@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { sql, one } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { slugify } from "@/lib/slug";
-import { createSession, destroySession, currentAccount, currentLang } from "@/lib/session";
+import { createSession, destroySession, currentAccount, currentLang, pruneSessions } from "@/lib/session";
 import { log } from "@/lib/activity";
 import { dict, LANG_COOKIE, normalizeLang } from "@/lib/i18n";
 
@@ -39,7 +39,12 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   if (account.is_disabled) return { error: d.disabled };
 
   await createSession(account.id);
-  await sql`update accounts set last_login_at = now() where id = ${account.id}`;
+  // Housekeeping on the one path that is already slow (scrypt dominates it), so
+  // expired rows never accumulate in the free-tier database.
+  await Promise.all([
+    sql`update accounts set last_login_at = now() where id = ${account.id}`,
+    pruneSessions(),
+  ]);
   await log({ actorId: account.id, actorName: rawName, action: "login", teamId: account.role === "team" ? account.id : null });
 
   redirect(account.role === "admin" ? "/admin" : "/");

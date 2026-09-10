@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { currentLang } from "@/lib/session";
 import { dict } from "@/lib/i18n";
-import { modelScores, criterionAverages } from "@/lib/queries";
+import { modelScores, criterionAveragesFor } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 
 export default async function AdminScoresPage() {
@@ -9,10 +9,16 @@ export default async function AdminScoresPage() {
   const d = dict(lang).admin.scores;
 
   const scored = scores.filter((s) => s.submissions > 0);
-  const details = await Promise.all(
-    scored.slice(0, 40).map(async (s) => ({ id: s.model_id, rows: await criterionAverages(s.model_id) })),
-  );
-  const detailFor = (modelId: string) => details.find((entry) => entry.id === modelId)?.rows ?? [];
+
+  // One query for every model's breakdown, then grouped in memory.
+  const details = await criterionAveragesFor(scored.slice(0, 40).map((s) => s.model_id));
+  const byModel = new Map<string, typeof details>();
+  for (const row of details) {
+    const list = byModel.get(row.model_id);
+    if (list) list.push(row);
+    else byModel.set(row.model_id, [row]);
+  }
+  const detailFor = (modelId: string) => byModel.get(modelId) ?? [];
 
   return (
     <div className="stack">
