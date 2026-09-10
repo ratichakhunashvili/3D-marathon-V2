@@ -8,7 +8,15 @@ import { slugify } from "@/lib/slug";
 import { presetForName } from "@/lib/avatars";
 import { log } from "@/lib/activity";
 import { dict } from "@/lib/i18n";
-import { disconnectDrive } from "@/lib/drive";
+import { getSettings } from "@/lib/settings";
+import {
+  disconnectDrive,
+  driveStatus,
+  parseFolderId,
+  rootConfig,
+  setRootFolder,
+  verifyDrive,
+} from "@/lib/drive";
 import { MB } from "@/lib/format";
 
 export type TeamCreateState = {
@@ -253,6 +261,76 @@ export async function disconnectDriveAction(): Promise<void> {
   await disconnectDrive();
   await log({ actorId: admin.id, actorName: admin.name, action: "drive.disconnect" });
   revalidatePath("/admin/settings");
+}
+
+export type DriveRootState = { error?: string; ok?: string };
+
+/**
+ * Pins the Drive folder that uploads land in. Accepts a pasted folder link or a bare id;
+ * an empty value hands the job back to the app, which then creates its own folder.
+ */
+export async function setDriveRootAction(
+  _prev: DriveRootState,
+  formData: FormData,
+): Promise<DriveRootState> {
+  const admin = await requireAdmin();
+  const raw = String(formData.get("folder") ?? "").trim();
+
+  if (!raw) {
+    await setRootFolder(null);
+    await log({ actorId: admin.id, actorName: admin.name, action: "settings.update", meta: { driveRoot: null } });
+    revalidatePath("/admin/settings");
+    return { ok: "Cleared — the app will create its own folder on the next connect." };
+  }
+
+  const folderId = parseFolderId(raw);
+  if (!folderId) return { error: "That does not look like a Google Drive folder link or id." };
+
+  const previous = await rootConfig();
+  await setRootFolder(folderId);
+
+  const status = await driveStatus();
+  if (!status.connected) {
+    // Nothing to verify against yet; the connect flow will check it.
+    return { ok: `Folder saved (${folderId}). Connect Drive to verify it.` };
+  }
+
+  // Already connected: prove the folder is usable, and say so plainly if it is not.
+  const settings = await getSettings();
+  const check = await verifyDrive(settings.event_name);
+
+  if (!check.ok) {
+    const scopeHint = !previous.external
+      ? " The app is still connected with the narrow drive.file scope, which cannot write into a folder it did not create — press Reconnect to re-approve with full access."
+      : "";
+    return { error: `${check.error}${scopeHint}` };
+  }
+
+  await log({
+    actorId: admin.id,
+    actorName: admin.name,
+    action: "settings.update",
+    meta: { driveRoot: folderId, folderName: check.folderName },
+  });
+
+  revalidatePath("/admin/settings");
+  return { ok: `Uploads will go into "${check.folderName}".` };
+}
+
+export type DriveCheckState = { error?: string; ok?: string };
+
+/** "Test connection": reads the root folder and writes a throwaway folder inside it. */
+export async function checkDriveAction(
+  _prev: DriveCheckState,
+  _formData: FormData,
+): Promise<DriveCheckState> {
+  await requireAdmin();
+  const settings = await getSettings();
+  const check = await verifyDrive(settings.event_name);
+
+  return check.ok
+    ? { ok: `Working — uploads go into "${check.folderName}" and a test folder was created and removed.` }
+    : { error: check.error };
 }
 
 /** Removes half-finished uploads left behind by closed tabs. */

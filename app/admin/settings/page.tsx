@@ -5,7 +5,7 @@ import { allCriteria } from "@/lib/queries";
 import { driveStatus, folderLink, oauthConfig } from "@/lib/drive";
 import { MB } from "@/lib/format";
 import { disconnectDriveAction, upsertCriterionAction, deleteCriterionAction, cleanupPendingAction } from "@/app/actions/admin";
-import { SettingsForm } from "./forms";
+import { SettingsForm, DriveRootForm, DriveCheckButton } from "./forms";
 
 export default async function AdminSettingsPage({
   searchParams,
@@ -52,6 +52,11 @@ export default async function AdminSettingsPage({
                 {d.driveFolder}: {d.driveOpen} ↗
               </a>
             )}
+            {drive.rootIsExternal && (
+              <span className="chip chip-amber tiny">
+                full Drive access (pinned folder)
+              </span>
+            )}
           </div>
 
           <div className="row row-tight">
@@ -65,6 +70,11 @@ export default async function AdminSettingsPage({
             )}
           </div>
         </div>
+
+        <hr />
+        <DriveRootForm lang={lang} currentId={drive.rootFolderId} isExternal={drive.rootIsExternal} />
+
+        {drive.connected && <DriveCheckButton lang={lang} />}
       </section>
 
       {/* ------------------------------------------------ event settings */}

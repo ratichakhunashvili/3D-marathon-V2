@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   const state = randomToken(16);
-  const url = authorizeUrl(state);
+  const url = await authorizeUrl(state);
   if (!url) {
     return NextResponse.redirect(
       new URL("/admin/settings?drive=missing-env", process.env.APP_BASE_URL ?? "http://localhost:3000"),

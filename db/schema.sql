@@ -179,6 +179,11 @@ create table if not exists drive_auth (
 );
 insert into drive_auth (id) values (1) on conflict (id) do nothing;
 
+-- true  = the organizer pinned a folder that already existed in their Drive
+--         (needs the full `drive` OAuth scope: `drive.file` cannot see a parent it did not create)
+-- false = the app created its own folder (the narrow `drive.file` scope is enough)
+alter table drive_auth add column if not exists root_is_external boolean not null default false;
+
 -- Deferred FKs (files is created after models/versions)
 do $$
 begin

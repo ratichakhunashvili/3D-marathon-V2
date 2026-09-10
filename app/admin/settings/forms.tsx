@@ -1,9 +1,74 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateSettingsAction, type SettingsState } from "@/app/actions/admin";
+import {
+  updateSettingsAction,
+  setDriveRootAction,
+  checkDriveAction,
+  type SettingsState,
+  type DriveRootState,
+  type DriveCheckState,
+} from "@/app/actions/admin";
 import { dict, type Lang } from "@/lib/i18n";
 import { toDatetimeLocal } from "@/lib/format";
+
+/** Pin the Drive folder uploads land in — paste the folder link straight from Drive. */
+export function DriveRootForm({
+  lang,
+  currentId,
+  isExternal,
+}: {
+  lang: Lang;
+  currentId: string | null;
+  isExternal: boolean;
+}) {
+  const d = dict(lang).admin.settings;
+  const [state, action, pending] = useActionState<DriveRootState, FormData>(setDriveRootAction, {});
+
+  return (
+    <form action={action} className="stack-sm">
+      <span className="label small muted">{d.driveFolder}</span>
+
+      {state.error && <div className="alert alert-error">{state.error}</div>}
+      {state.ok && <div className="alert alert-ok">{state.ok}</div>}
+
+      <div className="row" style={{ alignItems: "flex-end" }}>
+        <label className="field" style={{ flex: "1 1 260px", marginBottom: 0 }}>
+          <input
+            name="folder"
+            defaultValue={currentId ?? ""}
+            placeholder="https://drive.google.com/drive/folders/…"
+          />
+          <span className="hint">
+            {isExternal
+              ? "Your own folder — this needs the full Drive scope, so press Reconnect after changing it."
+              : "Empty means the app creates and manages its own folder."}
+          </span>
+        </label>
+        <button className="btn btn-sm" disabled={pending}>
+          {pending ? "…" : d.save}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function DriveCheckButton({ lang }: { lang: Lang }) {
+  const d = dict(lang).admin.settings;
+  const [state, action, pending] = useActionState<DriveCheckState, FormData>(checkDriveAction, {});
+
+  return (
+    <form action={action} className="stack-sm">
+      {state.error && <div className="alert alert-error">{state.error}</div>}
+      {state.ok && <div className="alert alert-ok">{state.ok}</div>}
+      <div>
+        <button className="btn btn-sm" disabled={pending}>
+          {pending ? "…" : d.driveCheck}
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export function SettingsForm({
   lang,

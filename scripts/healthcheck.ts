@@ -19,7 +19,7 @@ import {
   globalStats,
 } from "../lib/queries.ts";
 import { getSettings, teamStorageUsed, uploadGate } from "../lib/settings.ts";
-import { driveStatus, oauthConfig } from "../lib/drive.ts";
+import { driveStatus, driveScopes, verifyDrive, oauthConfig } from "../lib/drive.ts";
 import { formatBytes } from "../lib/format.ts";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -77,7 +77,15 @@ console.log(`  limits          ${formatBytes(settings.max_file_bytes)} per file,
 console.log("\ngoogle drive");
 console.log(`  oauth env       ${oauthConfig() ? "set" : "MISSING (uploads cannot work)"}`);
 console.log(`  connected       ${drive.connected ? drive.email : "NO (connect it in /admin/settings)"}`);
-console.log(`  root folder     ${drive.rootFolderId ?? "not created yet"}`);
+console.log(`  root folder     ${drive.rootFolderId ?? "none yet (the app will create one)"}`);
+console.log(`  root owner      ${drive.rootIsExternal ? "pinned by the organizer" : "created by the app"}`);
+console.log(`  scope requested ${await driveScopes()}`);
+
+if (drive.connected) {
+  const check = await verifyDrive(settings.event_name);
+  console.log(`  write test      ${check.ok ? `ok -> "${check.folderName}"` : `FAILED: ${check.error}`}`);
+  if (!check.ok) failures++;
+}
 
 if (!drive.connected) failures++;
 

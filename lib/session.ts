@@ -76,8 +76,13 @@ export const currentLang = cache(async (): Promise<Lang> => {
 });
 
 export class AccessError extends Error {
-  constructor(public kind: "auth" | "admin" = "auth") {
+  // Explicit field, not a constructor parameter property: Node's strip-only TypeScript
+  // support (used by the scripts in scripts/) does not accept that shorthand.
+  readonly kind: "auth" | "admin";
+
+  constructor(kind: "auth" | "admin" = "auth") {
     super(kind === "admin" ? "Admin access required" : "Login required");
+    this.kind = kind;
   }
 }
 

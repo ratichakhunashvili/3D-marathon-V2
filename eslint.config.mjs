@@ -16,6 +16,16 @@ const eslintConfig = defineConfig([
     // 3D viewer works without a CDN. Not our code, not ours to lint.
     "public/draco/**",
   ]),
+  {
+    // Server action signatures are fixed by React's useActionState: (prevState, formData).
+    // An action that ignores one of them still has to declare it, so allow a leading _.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

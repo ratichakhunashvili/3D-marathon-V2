@@ -22,11 +22,22 @@ const API = "https://www.googleapis.com/drive/v3";
 const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 
-export const DRIVE_SCOPES = [
-  "https://www.googleapis.com/auth/drive.file",
-  "openid",
-  "email",
-].join(" ");
+/**
+ * Two possible Drive scopes, and the choice is forced by where the files go:
+ *
+ * - `drive.file` (narrow, preferred): the app may only touch files it created itself.
+ *   Enough when the app creates its own event folder. Non-sensitive, so the OAuth app can
+ *   be published without a Google review, which is what stops the refresh token expiring
+ *   every 7 days.
+ *
+ * - `drive` (full): required to write inside a folder that already existed in the
+ *   organizer's Drive. Under `drive.file` the API answers 404 for such a parent, because
+ *   the app holds no per-file grant for it. This is a restricted scope: Google asks for a
+ *   verification review before publishing, and some Workspace tenants block it outright.
+ */
+const SCOPE_FILE = "https://www.googleapis.com/auth/drive.file";
+const SCOPE_FULL = "https://www.googleapis.com/auth/drive";
+const IDENTITY_SCOPES = ["openid", "email"];
 
 export class DriveNotConnected extends Error {
   constructor() {
@@ -34,10 +45,42 @@ export class DriveNotConnected extends Error {
   }
 }
 
+/** The pinned folder is set but unreachable — almost always a scope or wrong-account problem. */
+export class DriveRootUnreachable extends Error {
+  // Declared explicitly rather than as a constructor parameter property: Node runs the
+  // scripts in scripts/ with strip-only type removal, which rejects that shorthand.
+  readonly folderId: string;
+
+  constructor(folderId: string) {
+    super(
+      `The configured Drive folder (${folderId}) is not reachable by this app. ` +
+        `Either it belongs to a different Google account, or the app was connected with the ` +
+        `narrow drive.file scope, which cannot open a folder it did not create. ` +
+        `Reconnect Drive in /admin/settings.`,
+    );
+    this.folderId = folderId;
+  }
+}
+
+/** Accepts a Drive folder URL or a bare id and returns the id. */
+export function parseFolderId(input: string): string | null {
+  const value = (input ?? "").trim();
+  if (!value) return null;
+
+  const fromUrl = /\/folders\/([A-Za-z0-9_-]{10,})/.exec(value);
+  if (fromUrl) return fromUrl[1];
+
+  const fromQuery = /[?&]id=([A-Za-z0-9_-]{10,})/.exec(value);
+  if (fromQuery) return fromQuery[1];
+
+  return /^[A-Za-z0-9_-]{10,}$/.test(value) ? value : null;
+}
+
 type AuthRow = {
   refresh_token_enc: string | null;
   connected_email: string | null;
   root_folder_id: string | null;
+  root_is_external: boolean;
   access_token_enc: string | null;
   access_token_expires_at: string | null;
 };
@@ -45,26 +88,65 @@ type AuthRow = {
 async function authRow(): Promise<AuthRow | null> {
   return one<AuthRow>(
     await sql`
-      select refresh_token_enc, connected_email, root_folder_id,
+      select refresh_token_enc, connected_email, root_folder_id, root_is_external,
              access_token_enc, access_token_expires_at
       from drive_auth where id = 1
     `,
   );
 }
 
+export type RootConfig = {
+  id: string | null;
+  /** true when the organizer pinned a folder the app did not create. */
+  external: boolean;
+};
+
+/** Where uploads go. A pinned folder wins; GOOGLE_DRIVE_ROOT_ID seeds it on first use. */
+export async function rootConfig(): Promise<RootConfig> {
+  const row = await authRow();
+  if (row?.root_folder_id) {
+    return { id: row.root_folder_id, external: row.root_is_external };
+  }
+
+  const fromEnv = parseFolderId(process.env.GOOGLE_DRIVE_ROOT_ID ?? "");
+  if (fromEnv) return { id: fromEnv, external: true };
+
+  return { id: null, external: false };
+}
+
+/** Pins an existing Drive folder as the upload root. Pass null to hand the job back to the app. */
+export async function setRootFolder(folderId: string | null): Promise<void> {
+  await sql`
+    update drive_auth
+    set root_folder_id = ${folderId}, root_is_external = ${folderId !== null}, updated_at = now()
+    where id = 1
+  `;
+}
+
 export type DriveStatus = {
   connected: boolean;
   email: string | null;
   rootFolderId: string | null;
+  rootIsExternal: boolean;
+  fullAccess: boolean;
 };
 
 export async function driveStatus(): Promise<DriveStatus> {
   const row = await authRow();
+  const root = await rootConfig();
   return {
     connected: Boolean(row?.refresh_token_enc),
     email: row?.connected_email ?? null,
-    rootFolderId: row?.root_folder_id ?? null,
+    rootFolderId: root.id,
+    rootIsExternal: root.external,
+    fullAccess: root.external,
   };
+}
+
+/** The scope set to ask Google for, decided by whether a pre-existing folder is pinned. */
+export async function driveScopes(): Promise<string> {
+  const root = await rootConfig();
+  return [root.external ? SCOPE_FULL : SCOPE_FILE, ...IDENTITY_SCOPES].join(" ");
 }
 
 export function oauthConfig() {
@@ -75,14 +157,14 @@ export function oauthConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
-export function authorizeUrl(state: string): string | null {
+export async function authorizeUrl(state: string): Promise<string | null> {
   const cfg = oauthConfig();
   if (!cfg) return null;
   const params = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: DRIVE_SCOPES,
+    scope: await driveScopes(),
     access_type: "offline",
     prompt: "consent", // always return a refresh_token, even on re-connect
     include_granted_scopes: "true",
@@ -289,15 +371,61 @@ export function safeName(name: string): string {
   );
 }
 
-/** The event's top-level folder, created on first use and remembered in the database. */
+/**
+ * The folder every upload lands in.
+ *
+ * If the organizer pinned one of their own folders it is used as-is (and checked once, so a
+ * wrong id or too-narrow a scope fails loudly at connect time rather than mid-upload).
+ * Otherwise the app creates and remembers its own folder.
+ */
 export async function ensureRootFolder(eventName: string): Promise<string> {
   const row = await authRow();
   if (!row?.refresh_token_enc) throw new DriveNotConnected();
-  if (row.root_folder_id) return row.root_folder_id;
+
+  const root = await rootConfig();
+
+  if (root.id) {
+    if (root.external) {
+      const meta = await fileMeta(root.id);
+      if (!meta) throw new DriveRootUnreachable(root.id);
+    }
+    // Persist a value that came from the environment so it survives config changes.
+    if (!row.root_folder_id) await setRootFolder(root.id);
+    return root.id;
+  }
 
   const id = await ensureFolder(eventName || "Hackathon 3D", "root");
-  await sql`update drive_auth set root_folder_id = ${id}, updated_at = now() where id = 1`;
+  await sql`
+    update drive_auth
+    set root_folder_id = ${id}, root_is_external = false, updated_at = now()
+    where id = 1
+  `;
   return id;
+}
+
+export type DriveCheck =
+  | { ok: true; folderName: string; folderId: string; writable: true }
+  | { ok: false; error: string };
+
+/**
+ * Proves the connection end to end: reads the root folder, then creates and removes a
+ * throwaway folder inside it. Reading alone is not enough — under the narrow scope a pinned
+ * folder can be readable through an earlier grant yet reject new children.
+ */
+export async function verifyDrive(eventName: string): Promise<DriveCheck> {
+  try {
+    const rootId = await ensureRootFolder(eventName);
+    const meta = await fileMeta(rootId);
+    if (!meta) return { ok: false, error: new DriveRootUnreachable(rootId).message };
+
+    const probe = await createFolder(`_modelhub-check-${Date.now()}`, rootId);
+    await deleteFile(probe);
+
+    return { ok: true, folderName: meta.name, folderId: rootId, writable: true };
+  } catch (err) {
+    if (err instanceof DriveNotConnected) return { ok: false, error: "Google Drive is not connected." };
+    return { ok: false, error: err instanceof Error ? err.message : "Unknown Drive error" };
+  }
 }
 
 export async function renameFile(fileId: string, name: string): Promise<void> {
