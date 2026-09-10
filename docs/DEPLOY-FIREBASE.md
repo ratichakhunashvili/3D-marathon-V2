@@ -149,12 +149,12 @@ want to chase it, read the log in the console first:
 The `apphosting` block is deliberately **not** in `firebase.json` right now, so
 that a plain `firebase deploy` cannot fail on it.
 
-Note that connecting GitHub buys automatic redeploys on push; it is not needed
-for the site to be up, because Cloud Run already serves it.
+Connecting GitHub buys automatic redeploys on push; it is not needed for the
+site to be up, because Cloud Run already serves it.
 
-After that every push to `main` redeploys automatically. If you decide to use
-App Hosting as the real deployment, delete the Cloud Run service and the
-Hosting rewrite so there is only one live copy:
+If you ever get App Hosting working and prefer it, delete the Cloud Run service
+and drop the `rewrites` block from `firebase.json`, so there is only one live
+copy of the site:
 
 ```bash
 gcloud run services delete modelhub-web --project hackathon-f160f --region us-central1
