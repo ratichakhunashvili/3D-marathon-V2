@@ -4,9 +4,8 @@ A private, GitHub-style social site for a 3D modeling hackathon. Teams upload th
 give each version a name, keep uploading new versions as it progresses, and review each
 other's models. Organizers see everything.
 
-Live at **<https://hackathon-f160f.web.app>**.
-
-**Next.js on Cloud Run behind Firebase Hosting · Neon Postgres · Google Drive for files.**
+Runs entirely on free tiers, no credit card: **Next.js on Vercel · Neon Postgres ·
+Google Drive for files**.
 
 ---
 
@@ -21,8 +20,10 @@ npm run dev          # http://localhost:3100
 Then connect Google Drive — **uploads do not work until you do**:
 see [docs/SETUP-GOOGLE-DRIVE.md](docs/SETUP-GOOGLE-DRIVE.md) (~10 minutes, no card).
 
-Deploying: [docs/DEPLOY-FIREBASE.md](docs/DEPLOY-FIREBASE.md) (this is what is live).
-The original Vercel route is still documented in [docs/DEPLOY.md](docs/DEPLOY.md).
+Deploying: [docs/DEPLOY.md](docs/DEPLOY.md).
+An earlier Firebase/Cloud Run deployment is kept in
+[docs/DEPLOY-FIREBASE.md](docs/DEPLOY-FIREBASE.md) for reference — it is not in
+use, because serving this app on Firebase requires the paid Blaze plan.
 
 Your admin username and password are in `.env.local` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 Change the password at `/profile` after the first login.
@@ -74,7 +75,7 @@ them. Georgian is the default. Team names written in Georgian get readable URLs
 ## Architecture
 
 ```
-Browser ──── page + form actions ────► Next.js on Cloud Run ──► Neon Postgres
+Browser ──── page + form actions ────► Next.js on Vercel ────► Neon Postgres
    │                                          (index: teams, models,
    │                                           versions, reviews, log)
    └──── file bytes, resumable PUT ────► Google Drive
@@ -88,8 +89,7 @@ Two decisions carry most of the weight:
 1. **Postgres holds the index, Drive holds the bytes.** Comments, likes and scores need
    concurrent, transactional writes, which a folder of JSON files cannot do safely. Drive
    gives 15 GB of free space and a folder tree an organizer can browse by hand.
-2. **Uploads never touch the server.** Serverless platforms cap request bodies (4.5 MB on
-   Vercel; Cloud Run is more generous but still proxied). The server
+2. **Uploads never touch the server.** Vercel caps a request body at 4.5 MB. The server
    opens a Drive resumable session and hands the browser the session URI, so a 150 MB
    `.blend` goes straight to Google in 8 MB chunks and resumes after a dropped connection.
 

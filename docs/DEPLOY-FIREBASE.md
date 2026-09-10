@@ -1,16 +1,34 @@
-# Running ModelHub on Firebase
+# Running ModelHub on Firebase — reference only, NOT in use
 
-The site is live at **<https://hackathon-f160f.web.app>** — share that link.
+> **This deployment is switched off.** `https://hackathon-f160f.web.app` returns
+> a 503 and will keep doing so. See [DEPLOY.md](DEPLOY.md) for the deployment
+> that is actually used.
+>
+> **Why:** both billing accounts on the Google Cloud project are closed
+> (`billingEnabled: false`), so Cloud Run is not allowed to start an instance —
+> requests never reach the container, which is why there are no application
+> logs for the failures. Firebase cannot serve a server-rendered Next.js app
+> without the paid Blaze plan: sessions, server actions and streaming files
+> from Drive all need a Node server, and free Firebase Hosting serves static
+> files only. Dropping the Postgres index would not change this; Neon's free
+> tier costs nothing and was never the constraint.
+>
+> **To revive it:** attach an open billing account at
+> <https://console.cloud.google.com/billing/linkedaccount?project=hackathon-f160f>.
+> Nothing needs redeploying — Cloud Run will serve the existing revision again.
+> You will also need to put `output: "standalone"` back in `next.config.ts`
+> before rebuilding the container, since `Dockerfile` depends on
+> `.next/standalone`.
 
-Firebase project: `hackathon-f160f` (Blaze plan).
+Everything below documents what was built, so it can be picked up later.
+
+Firebase project: `hackathon-f160f`.
 Source: <https://github.com/ratichakhunashvili/3D-marathon-V2>
-
-There are two deployment paths set up, and they are independent:
 
 | Path | What serves the app | Deploy trigger | Status |
 | --- | --- | --- | --- |
-| **Cloud Run + Firebase Hosting** | Cloud Run service `modelhub-web` | one command, from this folder | **live now** |
-| **Firebase App Hosting** | backend `modelhub` | automatic, on git push | created, not serving — see below |
+| **Cloud Run + Firebase Hosting** | Cloud Run service `modelhub-web` | one command, from this folder | deployed, then stopped by billing |
+| **Firebase App Hosting** | backend `modelhub` | automatic, on git push | created, never built successfully |
 
 ---
 
@@ -73,11 +91,11 @@ Plain (non-secret) values are set on the service itself: `APP_BASE_URL`,
 the deployed site decrypt the Google refresh token the local install already
 stored, so Drive is connected without reconnecting.
 
-## One thing still to do: register the redirect URI
+## If you revive this: register the redirect URI
 
-Uploads work right now, because the refresh token already in the database is
-still valid. But **reconnecting** Drive from the deployed site will fail with
-`redirect_uri_mismatch` until this is added:
+Whichever origin ends up serving the app needs its callback registered, or
+reconnecting Drive fails with `redirect_uri_mismatch`. For this deployment that
+would be:
 
 1. Open <https://console.cloud.google.com/auth/clients> as
    `r.chakhunashvili@skillwill.edu.ge`.
@@ -96,11 +114,15 @@ is exactly the flow that needs the URI above.
 
 ## Cost
 
-`minInstances: 0`, so the service scales to zero and an idle deployment costs
-nothing beyond a few pennies of storage for the container image. The trade is a
-~1.7 s cold start on the first request after a quiet period (measured; a warm
-request is ~0.35 s). Set `--min-instances 1` to remove the cold start, at the
-cost of one continuously billed instance.
+`minInstances: 0`, so the service scaled to zero and an idle deployment cost
+nothing beyond a few pennies of storage for the container image. Cold start was
+~1.7 s after an idle period, ~0.35 s warm (both measured while it was serving);
+`--min-instances 1` removes the cold start at the cost of one continuously
+billed instance.
+
+None of that was the problem. Blaze requires a valid card on the billing
+account regardless of usage, and that is what ultimately stopped this
+deployment.
 
 ---
 
@@ -136,18 +158,22 @@ on GitHub at <https://github.com/ratichakhunashvili/3D-marathon-V2>, so:
 *Deploy from local source.* Adding an `apphosting` block to `firebase.json`
 (`backendId`, `rootDir`, `ignore`) makes `firebase deploy --only apphosting`
 upload this folder directly, no GitHub needed. It was tried and **the build
-fails**: the Node.js buildpack exits 51 inside the CNB lifecycle, and the log
-is not retrievable through `gcloud builds log`, Cloud Logging or a logs bucket —
-only through the Cloud Build console. Removing `package-lock.json` from the
-upload (to rule out the lockfile problem below) did not change it. The most
-likely cause is `output: "standalone"` in `next.config.ts`, which the Cloud Run
-image needs but which App Hosting's own Next adapter may not expect. If you
-want to chase it, read the log in the console first:
+failed**: the Node.js buildpack exited 51 inside the CNB lifecycle, with no log
+retrievable through `gcloud builds log`, Cloud Logging or a logs bucket — only
+through the Cloud Build console.
+
+The cause was probably simply that **billing lapsed while those builds ran**.
+The timeline fits: the Cloud Run deploys succeeded and served traffic, then the
+App Hosting builds failed, then every request started returning 503 and the
+Secret Manager API began refusing calls for want of billing. An earlier guess
+here blamed `output: "standalone"`; that is still worth ruling out, but billing
+is the better explanation. Re-test only after billing is restored, and read the
+log in the console:
 
 <https://console.cloud.google.com/cloud-build/builds;region=us-central1?project=495241590412>
 
-The `apphosting` block is deliberately **not** in `firebase.json` right now, so
-that a plain `firebase deploy` cannot fail on it.
+The `apphosting` block is deliberately **not** in `firebase.json`, so that a
+plain `firebase deploy` cannot fail on it.
 
 Connecting GitHub buys automatic redeploys on push; it is not needed for the
 site to be up, because Cloud Run already serves it.

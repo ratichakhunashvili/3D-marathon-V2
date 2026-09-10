@@ -1,9 +1,5 @@
 # Putting ModelHub online (free)
 
-> **The site is currently deployed on Firebase, not Vercel.**
-> See [DEPLOY-FIREBASE.md](DEPLOY-FIREBASE.md). This document is kept as the
-> no-credit-card alternative — Vercel Hobby needs no card, Firebase Blaze does.
-
 The whole stack stays inside free tiers:
 
 | Piece | Service | Free allowance | Card needed |
@@ -37,8 +33,8 @@ git push -u origin main
 1. Go to <https://vercel.com/new> and sign in with GitHub.
 2. Import the `modelhub` repository. Framework detection picks Next.js automatically —
    leave every build setting alone.
-3. Before clicking **Deploy**, open **Environment Variables** and add these five.
-   Copy the first two straight out of your local `.env.local`:
+3. Before clicking **Deploy**, open **Environment Variables** and add these.
+   Copy the secrets straight out of your local `.env.local` — never retype them:
 
    | Name | Value |
    | --- | --- |
@@ -48,6 +44,10 @@ git push -u origin main
    | `GOOGLE_CLIENT_SECRET` | from Google Cloud |
    | `GOOGLE_REDIRECT_URI` | `https://YOUR-APP.vercel.app/api/drive/callback` |
    | `APP_BASE_URL` | `https://YOUR-APP.vercel.app` |
+   | `GOOGLE_DRIVE_ROOT_ID` | `1pF2Z7BaO_m0oZtJndE8Y4KJGPvrKyqx0` (the `3D Marathon` folder) |
+
+   `GOOGLE_DRIVE_ROOT_ID` only seeds the setting on first use — the pinned folder
+   is already stored in the database — but setting it keeps the two in agreement.
 
    Use the **same** `APP_SECRET` as locally — it decrypts the stored Google token. A new
    secret means you must reconnect Drive.
